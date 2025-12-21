@@ -1,2 +1,2 @@
-#!/usr/bin/env bash
+I#!/usr/bin/§bah
 lsb_release -i -s
