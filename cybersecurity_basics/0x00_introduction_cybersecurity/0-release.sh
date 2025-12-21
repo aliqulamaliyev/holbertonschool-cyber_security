@@ -1,2 +1,2 @@
-I#!/usr/bin/§bah
-lsb_release -i -s
+#!/bin/bash
+< /dev/urandom tr -dc '[:alnum:]' | head -c "$1"
